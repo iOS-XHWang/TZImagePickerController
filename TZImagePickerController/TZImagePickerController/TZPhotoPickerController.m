@@ -19,7 +19,7 @@
 #import <MobileCoreServices/MobileCoreServices.h>
 #import "TZImageRequestOperation.h"
 
-@interface TZPhotoPickerController ()<UICollectionViewDataSource,UICollectionViewDelegate,UIImagePickerControllerDelegate,UINavigationControllerDelegate,UIAlertViewDelegate> {
+@interface TZPhotoPickerController () <UICollectionViewDataSource, UICollectionViewDelegate, UIImagePickerControllerDelegate, UINavigationControllerDelegate> {
     NSMutableArray *_models;
     
     UIView *_bottomToolBar;
@@ -98,6 +98,18 @@ static CGFloat itemMargin = 5;
     
     self.operationQueue = [[NSOperationQueue alloc] init];
     self.operationQueue.maxConcurrentOperationCount = 3;
+    
+    UIButton * leftBtn = [UIButton buttonWithType:UIButtonTypeSystem];
+    leftBtn.frame = CGRectMake(0, 0, 55, 44);
+    [leftBtn setImage:[UIImage imageNamed:@"back_arrow"] forState:UIControlStateNormal];
+    [leftBtn addTarget:self action:@selector(goBack) forControlEvents:UIControlEventTouchUpInside];
+    leftBtn.contentHorizontalAlignment = UIControlContentHorizontalAlignmentLeft;
+    UIBarButtonItem * barBtn = [[UIBarButtonItem alloc]initWithCustomView:leftBtn];
+    self.navigationItem.leftBarButtonItem = barBtn;
+}
+
+- (void)goBack {
+    [self.navigationController popViewControllerAnimated:YES];
 }
 
 - (void)fetchAssetModels {
@@ -642,8 +654,12 @@ static CGFloat itemMargin = 5;
         if (!appName) appName = [infoDict valueForKey:@"CFBundleName"];
         
         NSString *message = [NSString stringWithFormat:[NSBundle tz_localizedStringForKey:@"Please allow %@ to access your camera in \"Settings -> Privacy -> Camera\""],appName];
-        UIAlertView *alert = [[UIAlertView alloc] initWithTitle:[NSBundle tz_localizedStringForKey:@"Can not use camera"] message:message delegate:self cancelButtonTitle:[NSBundle tz_localizedStringForKey:@"Cancel"] otherButtonTitles:[NSBundle tz_localizedStringForKey:@"Setting"], nil];
-        [alert show];
+        UIAlertController *alertController = [UIAlertController alertControllerWithTitle:[NSBundle tz_localizedStringForKey:@"Can not use camera"] message:message preferredStyle:(UIAlertControllerStyleAlert)];
+        [alertController addAction:[UIAlertAction actionWithTitle:[NSBundle tz_localizedStringForKey:@"Setting"] style:(UIAlertActionStyleDefault) handler:^(UIAlertAction * _Nonnull action) {
+            [[UIApplication sharedApplication] openURL:[NSURL URLWithString:UIApplicationOpenSettingsURLString]];
+        }]];
+        [alertController addAction:[UIAlertAction actionWithTitle:[NSBundle tz_localizedStringForKey:@"Cancel"] style:(UIAlertActionStyleCancel) handler:nil]];
+        [self presentViewController:alertController animated:YES completion:nil];
     } else if (authStatus == AVAuthorizationStatusNotDetermined) {
         // fix issue 466, 防止用户首次拍照拒绝授权时相机页黑屏
         [AVCaptureDevice requestAccessForMediaType:AVMediaTypeVideo completionHandler:^(BOOL granted) {
@@ -784,14 +800,6 @@ static CGFloat itemMargin = 5;
         if ([selectedAssets containsObject:model.asset]) {
             model.isSelected = YES;
         }
-    }
-}
-
-#pragma mark - UIAlertViewDelegate
-
-- (void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex {
-    if (buttonIndex == 1) { // 去设置界面，开启相机访问权限
-        [[UIApplication sharedApplication] openURL:[NSURL URLWithString:UIApplicationOpenSettingsURLString]];
     }
 }
 
